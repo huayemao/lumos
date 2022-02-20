@@ -5,6 +5,7 @@ import localforage from 'localforage'
 import $ from '../lib/mdict/jquery-1.11.3.min'
 import { fileOpen } from 'browser-fs-access'
 import Image from 'next/image'
+import { APP_NAME } from '../constants'
 
 async function verifyPermission(fileHandle, withWrite) {
   const options = {
@@ -54,8 +55,9 @@ export default function Home() {
     const phrase = keyword
     const offset = 0
     dict.lookup(phrase, offset).then(function ($content) {
-      setContent($content.html())
-      dict.render($('#definition'))
+      const html = $content.html()
+      setContent(html)
+      dict.render($('#definition')) // 音频播放使用了事件监听，只能再 render 一次
     })
   }
 
@@ -108,14 +110,18 @@ export default function Home() {
   }, [])
 
   // 根据 handle 读取文件
-  useEffect(() => {
-    retriveFiles()
+  useEffect(async () => {
+    try {
+      await retriveFiles()
+    } catch (error) {
+      console.log(error)
+    }
   }, [handles])
 
   return (
     <div className="App h-screen">
       <nav className="fixed top-0 z-10 grid h-16 w-full grid-cols-4 items-center justify-around border-b border-gray-200 bg-white p-2">
-        <a className="mx-10 text-2xl font-bold text-rose-300">Luomos</a>
+        <a className="mx-10 text-2xl font-bold text-rose-400">{APP_NAME}</a>
         <div className="col-span-3 flex justify-center">
           <input
             className="dark:shadow-sm-light block rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
