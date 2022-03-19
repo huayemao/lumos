@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import { map } from 'lodash'
 import { MParser, MRenderer } from '../lib/mdict'
 import localforage from 'localforage'
@@ -6,6 +6,8 @@ import $ from '../lib/mdict/jquery-1.11.3.min'
 import { fileOpen } from 'browser-fs-access'
 import Image from 'next/image'
 import { APP_NAME } from '../constants'
+import { Definition } from './Definition'
+import { useRouter } from 'next/router'
 
 async function verifyPermission(fileHandle, withWrite) {
   const options = {
@@ -24,25 +26,30 @@ async function verifyPermission(fileHandle, withWrite) {
 }
 
 export default function Home() {
+  const router = useRouter()
+  const { word } = router.query
   const [content, setContent] = useState('')
   const [paths, setPaths] = useState([])
-  const [keyword, setKeyword] = useState('pa')
-  const [dict, setDict] = useState({})
+  const [keyword, setKeyword] = useState(decodeURIComponent(word))
+  const [dict, setDict] = useState(null)
   const [handles, setHandles] = useState([])
   const [needActivate, setNeedActivate] = useState(true)
 
   const initDict = (files) => {
     if (files.length > 0) {
-      MParser(files).then((resources) => {
-        const mdict = MRenderer(resources)
-        setDict(mdict)
-        $('#dict-title').html(
-          (resources['mdx'] || resources['mdd']).value().description ||
-            '** no description **'
-        )
-        mdict.render($('#dict-title'))
-      })
-      setPaths(map(files, (file) => ({ ...file, loaded: true })))
+      MParser(files)
+        .then((resources) => {
+          const mdict = MRenderer(resources)
+          setDict(mdict)
+          $('#dict-title').html(
+            (resources['mdx'] || resources['mdd']).value().description ||
+              '** no description **'
+          )
+          mdict.render($('#dict-title'))
+        })
+        .then(() => {
+          setPaths(map(files, (file) => ({ ...file, loaded: true })))
+        })
     }
   }
 
@@ -52,13 +59,7 @@ export default function Home() {
   }
 
   const handleSubmit = async () => {
-    const phrase = keyword
-    const offset = 0
-    dict.lookup(phrase, offset).then(function ($content) {
-      const html = $content.html()
-      setContent(html)
-      dict.render($('#definition')) // 音频播放使用了事件监听，只能再 render 一次
-    })
+    router.push({ query: { word: keyword } }, undefined, { shallow: false })
   }
 
   const handleLoadFile = async () => {
@@ -117,6 +118,24 @@ export default function Home() {
       console.log(error)
     }
   }, [handles])
+
+  useEffect(() => {
+    const offset = 0
+
+    const phrase = decodeURIComponent(word)
+
+    dict &&
+      dict
+        .search({ phrase: phrase, max: 5 })
+        .then(function (list) {
+          return dict.lookup(list[0])
+        })
+        .then(function ($content) {
+          const html = $content.html()
+          setContent(html)
+          dict.render($('#definition')) // 音频播放使用了事件监听，只能再 render 一次
+        })
+  }, [word, dict])
 
   return (
     <div className="App h-screen">
@@ -187,15 +206,7 @@ export default function Home() {
           ></div>
         </div>
 
-        {content && (
-          <div className="col-span-3 h-screen overflow-y-auto pt-16">
-            <div
-              id="definition"
-              dangerouslySetInnerHTML={{ __html: content }}
-              className="m-10  rounded-lg border border-gray-200 bg-white p-6 shadow-md"
-            ></div>
-          </div>
-        )}
+        {content && <Definition content={content} />}
       </div>
     </div>
   )
