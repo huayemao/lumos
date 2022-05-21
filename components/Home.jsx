@@ -8,6 +8,7 @@ import Image from 'next/image'
 import { APP_NAME } from '../constants'
 import { Definition } from './Definition'
 import { useRouter } from 'next/router'
+import c from 'classnames'
 
 async function verifyPermission(fileHandle, withWrite) {
   const options = {
@@ -43,7 +44,7 @@ export default function Home() {
           setDict(mdict)
           $('#dict-title').html(
             (resources['mdx'] || resources['mdd']).value().description ||
-              '** no description **'
+            '** no description **'
           )
           mdict.render($('#dict-title'))
         })
@@ -103,11 +104,16 @@ export default function Home() {
     }
   }
 
+  const deleteFiles = async () => {
+    await localforage.removeItem('DICT_HANDLES')
+    setHandles(null)
+  }
+
   // 从 local 读路径 handle
   useEffect(async () => {
     const handles = await localforage.getItem('DICT_HANDLES')
     setHandles(handles)
-    return () => {}
+    return () => { }
   }, [])
 
   // 根据 handle 读取文件
@@ -191,19 +197,29 @@ export default function Home() {
                 </button>
               )}
               {handles?.length && needActivate && (
-                <button
-                  className="mr-2 mb-2 rounded-lg bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 px-5 py-2.5 text-center text-sm font-medium text-white shadow-lg shadow-pink-500/50 hover:bg-gradient-to-br focus:ring-4 focus:ring-pink-300 dark:shadow-lg dark:shadow-pink-800/80 dark:focus:ring-pink-800"
-                  onClick={retriveFiles}
-                >
-                  加载词典
-                </button>
+                <>
+                  <button
+                    className="mr-2 mb-2 rounded-lg bg-gradient-to-r from-indigo-500 via-indigo-600 to-indigo-700 px-5 py-2.5 text-center text-sm font-medium text-white shadow-lg shadow-indigo-500/50 hover:bg-gradient-to-br focus:ring-4 focus:ring-pink-300 dark:shadow-lg dark:shadow-pink-800/80 dark:focus:ring-pink-800"
+                    onClick={retriveFiles}
+                  >
+                    加载词典
+                  </button>
+                  <button
+                    className="mr-2 mb-2 rounded-lg bg-gradient-to-r from-pink-400 via-pink-500 to-pink-600 px-5 py-2.5 text-center text-sm font-medium text-white shadow-lg shadow-pink-500/50 hover:bg-gradient-to-br focus:ring-4 focus:ring-pink-300 dark:shadow-lg dark:shadow-pink-800/80 dark:focus:ring-pink-800"
+                    onClick={deleteFiles}
+                  >
+                    删除词典
+                  </button>
+                </>
               )}
             </div>
           )}
           <div
             id="dict-title"
-            className="my-2 max-w-xs rounded-lg border border-gray-200 bg-white p-2 shadow-md"
-          ></div>
+            className={c("my-2 max-w-xs rounded-lg border border-gray-200 bg-white p-2 shadow-md", {
+              'hidden': !dict
+            })}
+          />
         </div>
 
         {content && <Definition content={content} />}
